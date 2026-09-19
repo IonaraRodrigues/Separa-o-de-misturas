@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Separação de Misturas - ENEM & Vestibulares</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        labBlue: { 50: '#f0f7ff', 100: '#e0effe', 500: '#0284c7', 600: '#0369a1', 900: '#0c4a6e' },
+                        labGreen: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a' },
+                        labAmber: { 400: '#fbbf24', 500: '#f59e0b' },
+                        labGlass: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbars and sleek UI styles */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.8); }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .light .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* High Contrast mode overrides */
+        .high-contrast {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+        }
+        .high-contrast .glass-panel {
+            background: #000000 !important;
+            border: 2px solid #ffffff !important;
+        }
+        .high-contrast button, .high-contrast select, .high-contrast input {
+            border: 2px solid #ffff00 !important;
+            color: #ffff00 !important;
+        }
+
+        /* Custom glow effects for chemistry apparatus */
+        .glow-flame { filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.8)); }
+        .glow-cyan { filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.6)); }
+
+        canvas { display: block; touch-action: none; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col transition-colors duration-300 antialiased selection:bg-cyan-500 selection:text-white" id="appBody">
+
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-gradient-to-tr from-cyan-600 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                    LabSep <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">ENEM 2026</span>
+                </h1>
+                <p class="text-xs text-slate-400 hidden sm:block">Simulador Virtual Interativo de Métodos de Separação de Misturas</p>
+            </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <!-- Text Size Booster -->
+            <button id="btnTextScale" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Aumentar / Diminuir Texto" aria-label="Ajustar Tamanho de Fonte">
+                <span class="font-bold">A+</span>
+            </button>
+
+            <!-- High Contrast Toggle -->
+            <button id="btnContrast" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-medium border border-slate-700 transition" title="Modo Alto Contraste" aria-label="Modo Alto Contraste">
+                ⚡ <span class="hidden md:inline">Contraste</span>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button id="btnTheme" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5" aria-label="Alternar Tema">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText" class="hidden sm:inline">Modo Noite</span>
+            </button>
+
+            <!-- Manual Toggle Button -->
+            <button id="btnToggleManual" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <span>Manual ENEM</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 relative">
+        
+        <!-- Left / Top Controls Sidebar -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            
+            <!-- Technique Selector -->
+            <div class="glass-panel p-4 rounded-2xl shadow-xl">
+                <label for="methodSelect" class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-2 flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Técnica de Separação
+                </label>
+                <select id="methodSelect" class="w-full bg-slate-800/90 border border-slate-700 text-slate-100 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
+                    <option value="distillation">🧪 Destilação Fracionada (Água + Etanol)</option>
+                    <option value="funnel">💧 Funil de Decantação (Água + Óleo)</option>
+                    <option value="filtration">⏳ Filtração Simples (Água + Areia)</option>
+                    <option value="centrifuge">🌀 Centrifugação (Sangue Total)</option>
+                    <option value="magnetic">🧲 Separação Magnética (Areia + Limalha)</option>
+                </select>
+                <div id="methodBadge" class="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    Mistura Homogênea Líquido-Líquido
+                </div>
+            </div>
+
+            <!-- Dynamic Controls Panel -->
+            <div class="glass-panel p-4 rounded-2xl shadow-xl flex-1 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2 mb-4 flex items-center justify-between">
+                        <span>Parâmetros do Experimento</span>
+                        <span id="liveStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Simulação Ativa"></span>
+                    </h2>
+
+                    <!-- Parameter controls inserted dynamically per method -->
+                    <div id="dynamicControls" class="space-y-4 text-xs">
+                        <!-- Dynamic Sliders / Toggles injected here via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Simulation Action Buttons -->
+                <div class="pt-5 border-t border-slate-800 flex items-center gap-2 mt-4">
+                    <button id="btnPlayPause" class="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+                        <span id="playIcon">▶</span> <span id="playText">Iniciar</span>
+                    </button>
+                    <button id="btnReset" class="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl border border-slate-700 transition" title="Reiniciar Experimento">
+                        ↺ Reiniciar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live State Monitoring Card -->
+            <div class="glass-panel p-4 rounded-2xl shadow-xl text-xs space-y-2">
+                <h3 class="font-bold text-slate-300 uppercase tracking-wider text-[10px] text-cyan-400 mb-2">Telemetria do Sistema</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block text-[10px]">Temperatura</span>
+                        <span id="telemetryTemp" class="font-mono text-sm font-semibold text-amber-400">25.0 °C</span>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block text-[10px]">Progresso da Fase</span>
+                        <span id="telemetryProgress" class="font-mono text-sm font-semibold text-emerald-400">0%</span>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded-lg border border-slate-800 col-span-2">
+                        <span class="text-slate-400 block text-[10px]">Estado Químico Atual</span>
+                        <span id="telemetryState" class="font-medium text-slate-200">Mistura inicial pronta para separação.</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right / Main Simulation Canvas Viewport -->
+        <section class="lg:col-span-8 flex flex-col">
+            <div class="glass-panel rounded-2xl shadow-2xl p-2 sm:p-4 flex-1 flex flex-col relative overflow-hidden min-h-[420px] sm:min-h-[520px]">
+                
+                <!-- Canvas Overlay Indicators -->
+                <div class="absolute top-4 left-4 z-10 flex items-center gap-2">
+                    <span id="canvasTitle" class="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur border border-slate-700 text-xs font-semibold text-cyan-300 shadow-md">
+                        Destilação Fracionada
+                    </span>
+                </div>
+
+                <div class="absolute top-4 right-4 z-10 hidden sm:flex items-center gap-2 text-[10px] text-slate-400 bg-slate-900/80 backdrop-blur px-2.5 py-1 rounded-full border border-slate-800">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Interativo em Tempo Real
+                </div>
+
+                <!-- Simulation Canvas -->
+                <div class="flex-1 w-full h-full relative rounded-xl bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden flex items-center justify-center">
+                    <canvas id="simCanvas" class="w-full h-full cursor-crosshair"></canvas>
+                </div>
+
+                <!-- Live ARIA screen-reader status region -->
+                <div id="ariaStatus" class="sr-only" aria-live="polite">Simulação carregada e pronta.</div>
+            </div>
+        </section>
+
+    </main>
+
+    <aside id="manualPanel" class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-cyan-500/30 text-slate-200 transition-all duration-300 ease-in-out transform translate-y-[calc(100%-48px)] shadow-2xl max-h-[85vh] flex flex-col">
+        <!-- Manual Header Bar / Toggle -->
+        <button id="manualHandle" class="w-full py-3 px-6 bg-slate-800/90 hover:bg-slate-800 flex items-center justify-between border-b border-slate-700/60 cursor-pointer text-left focus:outline-none">
+            <div class="flex items-center gap-2">
+                <span class="text-cyan-400 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                    📚 Manual Prático ENEM & Vestibulares
+                </span>
+                <span id="manualSubTitle" class="text-xs text-slate-400 hidden sm:inline">| Conceitos, Pegadinhas e Fórmulas</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span id="manualToggleText">Clique para Expandir</span>
+                <svg id="manualArrow" class="w-4 h-4 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+        </button>
+
+        <!-- Manual Tab Navigation -->
+        <div class="overflow-x-auto bg-slate-950/60 border-b border-slate-800 px-6 py-2 flex gap-2 text-xs">
+            <button class="manual-tab-btn active px-3 py-1.5 rounded-lg font-semibold bg-cyan-600 text-white" data-tab="principio">Princípio Físico</button>
+            <button class="manual-tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800" data-tab="aplicacao">Aplicação Industrial & Cotidiano</button>
+            <button class="manual-tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800" data-tab="enem">Como Cai no ENEM & Pegadinhas</button>
+            <button class="manual-tab-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white hover:bg-slate-800" data-tab="diagrama">Guia de Classificação de Misturas</button>
+        </div>
+
+        <!-- Manual Content Body -->
+        <div class="p-6 overflow-y-auto space-y-4 text-sm leading-relaxed flex-1 max-w-5xl mx-auto w-full">
+            
+            <!-- Tab 1: Principio Fisico -->
+            <div id="tab-principio" class="manual-tab-content space-y-3">
+                <h3 id="manualHeadingPrincipio" class="text-lg font-bold text-cyan-300 border-b border-slate-800 pb-1">--</h3>
+                <p id="manualTextPrincipio" class="text-slate-300">Selecione um método acima para visualizar a fundamentação teórica completa.</p>
+                <div class="p-3 bg-cyan-950/40 border border-cyan-800/40 rounded-xl text-xs text-cyan-200">
+                    💡 <strong>Propriedade Físico-Química Chave:</strong> <span id="manualKeyProp">--</span>
+                </div>
+            </div>
+
+            <!-- Tab 2: Aplicacao Industrial -->
+            <div id="tab-aplicacao" class="manual-tab-content hidden space-y-3">
+                <h3 id="manualHeadingAplicacao" class="text-lg font-bold text-emerald-300 border-b border-slate-800 pb-1">Aplicações na Indústria e no Dia a Dia</h3>
+                <div id="manualTextAplicacao" class="text-slate-300 space-y-2">--</div>
+            </div>
+
+            <!-- Tab 3: Como cai no ENEM -->
+            <div id="tab-enem" class="manual-tab-content hidden space-y-3">
+                <h3 id="manualHeadingEnem" class="text-lg font-bold text-amber-300 border-b border-slate-800 pb-1">Dicas ENEM & Distratores Frequentes</h3>
+                <div id="manualTextEnem" class="text-slate-300 space-y-2">--</div>
+            </div>
+
+            <!-- Tab 4: Diagrama de Misturas -->
+            <div id="tab-diagrama" class="manual-tab-content hidden space-y-4">
+                <h3 class="text-lg font-bold text-purple-300 border-b border-slate-800 pb-1">Classificação Geral de Misturas & Separações</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+                        <h4 class="font-bold text-cyan-300 mb-2 border-b border-slate-700 pb-1">1. Misturas Homogêneas (1 única fase)</h4>
+                        <ul class="list-disc list-inside space-y-1 text-slate-300">
+                            <li><strong class="text-white">Líquido-Líquido:</strong> Destilação Fracionada (diferença de TE). Ex: Água + Etanol.</li>
+                            <li><strong class="text-white">Sólido-Líquido:</strong> Destilação Simples (recupera líquido e sólido) ou Evaporação (recupera só sólido).</li>
+                            <li><strong class="text-white">Gás-Gás:</strong> Liquefação Fracionada + Destilação (Ex: Separação do Ar Atmosférico).</li>
+                        </ul>
+                    </div>
+                    <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+                        <h4 class="font-bold text-amber-300 mb-2 border-b border-slate-700 pb-1">2. Misturas Heterogêneas (2 ou mais fases)</h4>
+                        <ul class="list-disc list-inside space-y-1 text-slate-300">
+                            <li><strong class="text-white">Líquido-Líquido:</strong> Decantação em Funil de Broma (Imiscíveis/Densidade). Ex: Água + Óleo.</li>
+                            <li><strong class="text-white">Sólido-Líquido:</strong> Filtração Simples/Vácuo, Decantação, Centrifugação.</li>
+                            <li><strong class="text-white">Sólido-Sólido:</strong> Separação Magnética, Catação, Levigação, Ventilação, Flotação.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <script>
+        const THEORY_DB = {
+            distillation: {
+                title: "Destilação Fracionada",
+                badge: "Homogênea | Líquido-Líquido",
+                principio: "Baseia-se na diferença entre os **Pontos de Ebulição (P.E.)** de líquidos miscíveis. Ao aquecer a mistura, o componente mais volátil (menor P.E.) vaporiza primeiro. Ao subir pela **coluna de fracionamento** (recheada de bolinhas de vidro ou pratos), os vapores sofrem sucessivas condensações e vaporizações, garantindo elevada pureza antes de atingir o **condensador de Liebig**.",
+                keyProp: "Pontos de Ebulição distintos e miscibilidade total.",
+                aplicacao: "• **Refino do Petróleo:** Separação da gasolina, querosene, diesel e GLP.<br>• **Indústria de Bebidas:** Produção de destilados de alta graduação alcoólica.<br>• **Separação dos Gases do Ar:** Liquefação seguida de destilação fracionada.",
+                enem: "⚠️ **Pegadinha Clássica:** Não confunda com *Destilação Simples*! A simples é usada para Sólido-Líquido (ex: Água + Sal). Para Líquido-Líquido com P.E. próximos, é obrigatória a *coluna de fracionamento*.<br>📌 **Questão ENEM:** Foco recorrente em fração do petróleo e torres de destilação nas refinarias."
+            },
+            funnel: {
+                title: "Funil de Decantação (Broma)",
+                badge: "Heterogênea | Líquido-Líquido",
+                principio: "Utilizado para separar líquidos **imiscíveis** (que não se misturam) com base na **diferença de densidade**. O líquido mais denso (ex: água) acumula-se no fundo e é escoado ao abrir a torneira (saca-rolhas/stopcock), enquanto o menos denso (ex: óleo) permanece no funil.",
+                keyProp: "Diferença de Densidade e Imiscibilidade.",
+                aplicacao: "• **Extração de óleos essenciais:** Separação do hidrolato após destilação a vapor.<br>• **Tratamento de efluentes:** Separação de óleos e graxas da água residual.<br>• **Análises laboratoriais:** Extração líquido-líquido com solventes orgânicos.",
+                enem: "⚠️ **Atenção:** Se a mistura for homogênea (ex: Água e Álcool), o funil de decantação **NÃO** funciona! Só serve para misturas heterogêneas.<br>📌 **Dica ENEM:** Lembre-se de retirar a tampa superior do funil ao abrir a torneira para evitar a formação de vácuo!"
+            },
+            filtration: {
+                title: "Filtração Simples",
+                badge: "Heterogênea | Sólido-Líquido",
+                principio: "Separa um sólido não dissolvido de um líquido utilizando um meio poroso (papel de filtro). A fase líquida (filtrado) atravessa os poros por gravidade, enquanto as partículas sólidas em suspensão ficam retidas na superfície (resíduo).",
+                keyProp: "Diferença de Tamanho de Partícula e Insolubilidade.",
+                aplicacao: "• **Preparo do Café:** Retenção do pó de café no filtro.<br>• **Tratamento de Água (ETA):** Etapa final de filtração com leito de areia, cascalho e carvão ativado.<br>• **Aspiradores de Pó:** Filtração Sólido-Gás.",
+                enem: "⚠️ **Cuidado:** Filtração não remove substâncias dissolvidas (ex: água com sal dissolvido passa direto pelo filtro). Para acelerar processos industriais, utiliza-se a *Filtração a Vácuo*.<br>📌 **Aplicação ETA no ENEM:** É uma etapa física obrigatória do tratamento de água municipal!"
+            },
+            centrifuge: {
+                title: "Centrifugação",
+                badge: "Heterogênea | Sólido-Líquido / Coloides",
+                principio: "Acelera o processo de decantação através da **força centrípeta/centrífuga** gerada por rotações em alta velocidade (RPM). Partículas ou fases mais densas são impulsionadas para o fundo do tubo com muito mais rapidez do que pela gravidade natural.",
+                keyProp: "Aceleração da Sedimentação por Rotação High-Speed.",
+                aplicacao: "• **Exames de Sangue:** Separação do plasma (líquido) dos glóbulos vermelhos/leucócitos (elementos figurados).<br>• **Laticínios:** Desnatamento do leite para separação do creme de leite.<br>• **Enriquecimento de Urânio:** Centrifugação de gás hexafluoreto de urânio.",
+                enem: "📌 **Foco ENEM:** Sangue é uma mistura **heterogênea coloidal**! A olho nu parece homogêneo, mas a centrifugação revela as fases. Excelente tema para questões interdisciplinares com Biologia."
+            },
+            magnetic: {
+                title: "Separação Magnética (Imantação)",
+                badge: "Heterogênea | Sólido-Sólido",
+                principio: "Utiliza um **campo magnético (ímã)** para atrair e remover seletivamente um dos componentes da mistura que apresente **propriedades ferromagnéticas** (como ferro, níquel, cobalto e suas ligas).",
+                keyProp: "Ferromagnetismo seletivo de um dos componentes.",
+                aplicacao: "• **Reciclagem e Lixões:** Eletroímãs gigantes para triagem de sucata ferrosa.<br>• **Mineração:** Purificação do minério de ferro remoção de impurezas estéreis.<br>• **Indústria Alimentícia:** Remoção de eventuais limalhas metálicas de cereais e farinhas.",
+                enem: "⚠️ **Pegadinha:** Nem todo metal é atraído por ímãs! Alumínio, cobre, ouro e prata **não** são ferromagnéticos. A atração só ocorre com compostos contendo Ferro, Níquel ou Cobalto.<br>📌 **ENEM:** Muito cobrado em temas de sustentabilidade e reciclagem de resíduos sólidos urbanos."
+            }
+        };
+
+        let currentMethod = 'distillation';
+        let isRunning = false;
+        let animFrameId = null;
+        let simProgress = 0; // 0 to 100%
+        let textScaleLevel = 0; // 0 normal, 1 large, 2 extra large
+
+        // Interactive parameters state
+        const params = {
+            distillation: { temp: 25, heatPower: 2 },
+            funnel: { stopcockOpen: false, flowRate: 1 },
+            filtration: { pourSpeed: 1, filterClog: 0 },
+            centrifuge: { rpm: 0, targetRpm: 2500, timeSec: 0 },
+            magnetic: { magnetX: 250, magnetY: 100, magnetPower: 50, isDragging: false }
+        };
+
+        // DOM Element references
+        const appBody = document.getElementById('appBody');
+        const methodSelect = document.getElementById('methodSelect');
+        const methodBadge = document.getElementById('methodBadge');
+        const dynamicControls = document.getElementById('dynamicControls');
+        const btnPlayPause = document.getElementById('btnPlayPause');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const btnReset = document.getElementById('btnReset');
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasTitle = document.getElementById('canvasTitle');
+        const ariaStatus = document.getElementById('ariaStatus');
+
+        // Telemetry DOM
+        const telemetryTemp = document.getElementById('telemetryTemp');
+        const telemetryProgress = document.getElementById('telemetryProgress');
+        const telemetryState = document.getElementById('telemetryState');
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const btnTheme = document.getElementById('btnTheme');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        let isDark = true;
+
+        btnTheme.addEventListener('click', () => {
+            isDark = !isDark;
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Modo Noite';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Modo Dia';
+            }
+        });
+
+        // High contrast mode
+        const btnContrast = document.getElementById('btnContrast');
+        btnContrast.addEventListener('click', () => {
+            appBody.classList.toggle('high-contrast');
+            updateAria("Modo de Alto Contraste alterado.");
+        });
+
+        // Text scale booster
+        const btnTextScale = document.getElementById('btnTextScale');
+        btnTextScale.addEventListener('click', () => {
+            textScaleLevel = (textScaleLevel + 1) % 3;
+            if (textScaleLevel === 0) {
+                document.documentElement.style.fontSize = '16px';
+            } else if (textScaleLevel === 1) {
+                document.documentElement.style.fontSize = '18px';
+            } else {
+                document.documentElement.style.fontSize = '20px';
+            }
+        });
+
+        function updateAria(msg) {
+            ariaStatus.textContent = msg;
+        }
+
+        const manualPanel = document.getElementById('manualPanel');
+        const manualHandle = document.getElementById('manualHandle');
+        const manualArrow = document.getElementById('manualArrow');
+        const manualToggleText = document.getElementById('manualToggleText');
+        let isManualOpen = false;
+
+        function toggleManual() {
+            isManualOpen = !isManualOpen;
+            if (isManualOpen) {
+                manualPanel.classList.remove('translate-y-[calc(100%-48px)]');
+                manualPanel.classList.add('translate-y-0');
+                manualArrow.classList.add('rotate-180');
+                manualToggleText.textContent = 'Clique para Recolher';
+            } else {
+                manualPanel.classList.add('translate-y-[calc(100%-48px)]');
+                manualPanel.classList.remove('translate-y-0');
+                manualArrow.classList.remove('rotate-180');
+                manualToggleText.textContent = 'Clique para Expandir';
+            }
+        }
+        manualHandle.addEventListener('click', toggleManual);
+        document.getElementById('btnToggleManual').addEventListener('click', () => {
+            if (!isManualOpen) toggleManual();
+        });
+
+        // Manual Tab Switcher
+        const manualTabBtns = document.querySelectorAll('.manual-tab-btn');
+        const manualTabContents = document.querySelectorAll('.manual-tab-content');
+
+        manualTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                manualTabBtns.forEach(b => {
+                    b.classList.remove('active', 'bg-cyan-600', 'text-white');
+                    b.classList.add('text-slate-400');
+                });
+                btn.classList.add('active', 'bg-cyan-600', 'text-white');
+                btn.classList.remove('text-slate-400');
+
+                const targetTab = btn.getAttribute('data-tab');
+                manualTabContents.forEach(content => {
+                    if (content.id === `tab-${targetTab}`) {
+                        content.classList.remove('hidden');
+                    } else {
+                        content.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        function updateManualContent(key) {
+            const data = THEORY_DB[key];
+            if (!data) return;
+
+            document.getElementById('manualHeadingPrincipio').textContent = data.title;
+            document.getElementById('manualTextPrincipio').innerHTML = data.principio;
+            document.getElementById('manualKeyProp').textContent = data.keyProp;
+            document.getElementById('manualTextAplicacao').innerHTML = data.aplicacao;
+            document.getElementById('manualTextEnem').innerHTML = data.enem;
+            methodBadge.textContent = data.badge;
+            canvasTitle.textContent = data.title;
+        }
+
+        function buildDynamicControls(method) {
+            dynamicControls.innerHTML = '';
+
+            if (method === 'distillation') {
+                dynamicControls.innerHTML = `
+                    <div>
+                        <div class="flex justify-between text-slate-300 font-medium mb-1">
+                            <label for="heatSlider">Intensidade do Bico de Bunsen:</label>
+                            <span id="heatVal" class="text-amber-400 font-bold">Médio (78°C)</span>
+                        </div>
+                        <input type="range" id="heatSlider" min="0" max="4" step="1" value="2" class="w-full accent-cyan-500 cursor-pointer">
+                    </div>
+                    <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 text-[11px] text-slate-300">
+                        <div>🔥 P.E. do Etanol: <strong>78.3 °C</strong></div>
+                        <div>💧 P.E. da Água: <strong>100.0 °C</strong></div>
+                    </div>
+                `;
+                document.getElementById('heatSlider').addEventListener('input', (e) => {
+                    params.distillation.heatPower = parseInt(e.target.value);
+                    const labels = ["Desligado", "Fraco (45°C)", "Médio (78°C)", "Forte (95°C)", "Máximo (110°C)"];
+                    document.getElementById('heatVal').textContent = labels[params.distillation.heatPower];
+                });
+            } else if (method === 'funnel') {
+                dynamicControls.innerHTML = `
+                    <div class="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <span class="font-medium text-slate-200">Torneira (Stopcock):</span>
+                        <button id="btnStopcock" class="px-3 py-1.5 rounded-lg text-xs font-bold transition ${params.funnel.stopcockOpen ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">
+                            ${params.funnel.stopcockOpen ? 'ABERTA' : 'FECHADA'}
+                        </button>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-slate-300 font-medium mb-1">
+                            <label for="flowSlider">Abertura do Fluxo:</label>
+                            <span id="flowVal" class="text-cyan-400 font-bold">1x</span>
+                        </div>
+                        <input type="range" id="flowSlider" min="0.5" max="3" step="0.5" value="1" class="w-full accent-cyan-500 cursor-pointer">
+                    </div>
+                `;
+                const btnStopcock = document.getElementById('btnStopcock');
+                btnStopcock.addEventListener('click', () => {
+                    params.funnel.stopcockOpen = !params.funnel.stopcockOpen;
+                    btnStopcock.textContent = params.funnel.stopcockOpen ? 'ABERTA' : 'FECHADA';
+                    btnStopcock.className = `px-3 py-1.5 rounded-lg text-xs font-bold transition ${params.funnel.stopcockOpen ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`;
+                    updateAria(`Torneira do funil ${params.funnel.stopcockOpen ? 'aberta' : 'fechada'}`);
+                });
+                document.getElementById('flowSlider').addEventListener('input', (e) => {
+                    params.funnel.flowRate = parseFloat(e.target.value);
+                    document.getElementById('flowVal').textContent = `${params.funnel.flowRate}x`;
+                });
+            } else if (method === 'filtration') {
+                dynamicControls.innerHTML = `
+                    <div>
+                        <div class="flex justify-between text-slate-300 font-medium mb-1">
+                            <label for="pourSlider">Velocidade de Despejo:</label>
+                            <span id="pourVal" class="text-cyan-400 font-bold">Normal</span>
+                        </div>
+                        <input type="range" id="pourSlider" min="1" max="3" step="1" value="1" class="w-full accent-cyan-500 cursor-pointer">
+                    </div>
+                    <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                        <div>📄 Porosidade do Filtro: <strong>Média (Qualitativo)</strong></div>
+                        <div>⌛ Acúmulo de Torta de Filtro: <span id="filterCakeText" class="text-amber-400 font-semibold">0%</span></div>
+                    </div>
+                `;
+                document.getElementById('pourSlider').addEventListener('input', (e) => {
+                    params.filtration.pourSpeed = parseInt(e.target.value);
+                    const labels = ["", "Normal", "Rápida", "Turbulenta"];
+                    document.getElementById('pourVal').textContent = labels[params.filtration.pourSpeed];
+                });
+            } else if (method === 'centrifuge') {
+                dynamicControls.innerHTML = `
+                    <div>
+                        <div class="flex justify-between text-slate-300 font-medium mb-1">
+                            <label for="rpmSlider">Velocidade (RPM):</label>
+                            <span id="rpmVal" class="text-cyan-400 font-bold">2500 RPM</span>
+                        </div>
+                        <input type="range" id="rpmSlider" min="500" max="5000" step="500" value="2500" class="w-full accent-cyan-500 cursor-pointer">
+                    </div>
+                    <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                        <div>🩸 Amostra: <strong>Sangue Anticoagulado</strong></div>
+                        <div>📊 Separação: <strong>Plasma vs. Elementos Figurados</strong></div>
+                    </div>
+                `;
+                document.getElementById('rpmSlider').addEventListener('input', (e) => {
+                    params.centrifuge.targetRpm = parseInt(e.target.value);
+                    document.getElementById('rpmVal').textContent = `${params.centrifuge.targetRpm} RPM`;
+                });
+            } else if (method === 'magnetic') {
+                dynamicControls.innerHTML = `
+                    <div>
+                        <div class="flex justify-between text-slate-300 font-medium mb-1">
+                            <label for="magnetPowerSlider">Força do Campo Magnético:</label>
+                            <span id="magnetPowerVal" class="text-cyan-400 font-bold">50%</span>
+                        </div>
+                        <input type="range" id="magnetPowerSlider" min="20" max="100" step="10" value="50" class="w-full accent-cyan-500 cursor-pointer">
+                    </div>
+                    <div class="p-2 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+                        💡 <strong>Instruções:</strong> Arraste o ímã com o mouse/toque sobre a mistura de areia e limalha de ferro para atrai-la!
+                    </div>
+                `;
+                document.getElementById('magnetPowerSlider').addEventListener('input', (e) => {
+                    params.magnetic.magnetPower = parseInt(e.target.value);
+                    document.getElementById('magnetPowerVal').textContent = `${params.magnetic.magnetPower}%`;
+                });
+            }
+        }
+
+        function resetSimulation() {
+            simProgress = 0;
+            params.distillation.temp = 25;
+            params.funnel.stopcockOpen = false;
+            params.filtration.filterClog = 0;
+            params.centrifuge.rpm = 0;
+            params.centrifuge.timeSec = 0;
+            
+            // Magnet particle re-init
+            if (currentMethod === 'magnetic') initMagneticParticles();
+
+            isRunning = false;
+            playIcon.textContent = '▶';
+            playText.textContent = 'Iniciar';
+            btnPlayPause.className = "flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2";
+            
+            updateTelemetry();
+            buildDynamicControls(currentMethod);
+            updateAria(`Simulação de ${THEORY_DB[currentMethod].title} reiniciada.`);
+        }
+
+        btnPlayPause.addEventListener('click', () => {
+            isRunning = !isRunning;
+            if (isRunning) {
+                playIcon.textContent = '⏸';
+                playText.textContent = 'Pausar';
+                btnPlayPause.className = "flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl transition shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2";
+                updateAria("Simulação iniciada.");
+            } else {
+                playIcon.textContent = '▶';
+                playText.textContent = 'Continuar';
+                btnPlayPause.className = "flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2";
+                updateAria("Simulação pausada.");
+            }
+        });
+
+        btnReset.addEventListener('click', resetSimulation);
+
+        methodSelect.addEventListener('change', (e) => {
+            currentMethod = e.target.value;
+            updateManualContent(currentMethod);
+            resetSimulation();
+        });
+
+        function updateTelemetry() {
+            telemetryProgress.textContent = `${Math.min(100, Math.floor(simProgress))}%`;
+
+            if (currentMethod === 'distillation') {
+                telemetryTemp.textContent = `${params.distillation.temp.toFixed(1)} °C`;
+                if (params.distillation.temp < 75) {
+                    telemetryState.textContent = "Aquecendo a mistura homogênea de água e etanol...";
+                } else if (params.distillation.temp >= 75 && params.distillation.temp <= 82) {
+                    telemetryState.textContent = "Vaporização e Destilação do Etanol (P.E. ~78°C) no condensador!";
+                } else if (params.distillation.temp > 82 && params.distillation.temp < 98) {
+                    telemetryState.textContent = "Primeira fração (Etanol) recolhida. Elevando temperatura para a Água.";
+                } else {
+                    telemetryState.textContent = "Destilação da fase aquosa em andamento (>100°C).";
+                }
+            } else if (currentMethod === 'funnel') {
+                telemetryTemp.textContent = "25.0 °C";
+                if (!params.funnel.stopcockOpen && simProgress === 0) {
+                    telemetryState.textContent = "Fases heterogêneas separadas por densidade. Torneira fechada.";
+                } else if (params.funnel.stopcockOpen && simProgress < 95) {
+                    telemetryState.textContent = "Drenando a fase inferior mais densa (Água)...";
+                } else {
+                    telemetryState.textContent = "Fase aquosa totalmente recolhida. Torneira deve ser fechada para reter o Óleo!";
+                }
+            } else if (currentMethod === 'filtration') {
+                telemetryTemp.textContent = "25.0 °C";
+                if (simProgress === 0) {
+                    telemetryState.textContent = "Pronto para filtrar a suspensão de água com areia.";
+                } else if (simProgress < 99) {
+                    telemetryState.textContent = "Filtrado (Água) gotejando no Erlenmeyer; Areia ficando retida no papel de filtro.";
+                } else {
+                    telemetryState.textContent = "Filtração concluída com sucesso. Resíduo retido no funil.";
+                }
+            } else if (currentMethod === 'centrifuge') {
+                telemetryTemp.textContent = "37.0 °C";
+                if (params.centrifuge.rpm < 100) {
+                    telemetryState.textContent = "Centrífuga parada. Sangue homogêneo em aparência coloidal.";
+                } else if (simProgress < 99) {
+                    telemetryState.textContent = `Aceleração a ${params.centrifuge.rpm} RPM. Sedimentando hemácias por força centrípeta!`;
+                } else {
+                    telemetryState.textContent = "Separação completa: Plasma (supernatante) e Papas de Hemácias no fundo.";
+                }
+            } else if (currentMethod === 'magnetic') {
+                telemetryTemp.textContent = "25.0 °C";
+                const countAttr = magneticParticles.filter(p => p.attached).length;
+                const total = magneticParticles.length;
+                const pct = Math.floor((countAttr / total) * 100);
+                simProgress = pct;
+                telemetryProgress.textContent = `${pct}%`;
+                if (pct === 0) {
+                    telemetryState.textContent = "Aproxime o ímã da mistura para atritar e extrair as limalhas de ferro.";
+                } else if (pct < 100) {
+                    telemetryState.textContent = `${countAttr} de ${total} partículas de ferro atraídas pelo campo magnético!`;
+                } else {
+                    telemetryState.textContent = "Toda a limalha de ferro foi extraída! Sobrou apenas a areia limpa.";
+                }
+            }
+        }
+
+        let magneticParticles = [];
+        function initMagneticParticles() {
+            magneticParticles = [];
+            const count = 70;
+            const w = canvas.width || 600;
+            const h = canvas.height || 400;
+            const centerX = w / 2;
+            const centerY = h * 0.75;
+
+            for (let i = 0; i < count; i++) {
+                magneticParticles.push({
+                    x: centerX + (Math.random() - 0.5) * 180,
+                    y: centerY + (Math.random() - 0.5) * 40,
+                    vx: 0,
+                    vy: 0,
+                    attached: false,
+                    offsetX: 0,
+                    offsetY: 0
+                });
+            }
+            params.magnetic.magnetX = w / 2;
+            params.magnetic.magnetY = h * 0.3;
+        }
+
+        // Canvas Interaction Events for Dragging Magnet
+        function handlePointerMove(clientX, clientY) {
+            if (currentMethod !== 'magnetic') return;
+            const rect = canvas.getBoundingClientRect();
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            if (params.magnetic.isDragging) {
+                params.magnetic.magnetX = x;
+                params.magnetic.magnetY = y;
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (currentMethod === 'magnetic') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const dist = Math.hypot(x - params.magnetic.magnetX, y - params.magnetic.magnetY);
+                if (dist < 60) {
+                    params.magnetic.isDragging = true;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', () => { params.magnetic.isDragging = false; });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (currentMethod === 'magnetic' && e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.touches[0].clientX - rect.left;
+                const y = e.touches[0].clientY - rect.top;
+                const dist = Math.hypot(x - params.magnetic.magnetX, y - params.magnetic.magnetY);
+                if (dist < 80) params.magnetic.isDragging = true;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => { params.magnetic.isDragging = false; });
+
+        let particleTimer = 0;
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particleTimer += 0.05;
+
+            // Render current active chemistry apparatus
+            if (currentMethod === 'distillation') {
+                renderDistillation();
+            } else if (currentMethod === 'funnel') {
+                renderFunnel();
+            } else if (currentMethod === 'filtration') {
+                renderFiltration();
+            } else if (currentMethod === 'centrifuge') {
+                renderCentrifuge();
+            } else if (currentMethod === 'magnetic') {
+                renderMagnetic();
+            }
+
+            updateTelemetry();
+            animFrameId = requestAnimationFrame(animate);
+        }
+
+        function renderDistillation() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerX = w * 0.32;
+            const flaskY = h * 0.65;
+
+            if (isRunning) {
+                // Temperature logic
+                const targetTemp = [25, 45, 78.3, 95, 110][params.distillation.heatPower];
+                if (params.distillation.temp < targetTemp) {
+                    params.distillation.temp += 0.15;
+                } else if (params.distillation.temp > targetTemp) {
+                    params.distillation.temp -= 0.15;
+                }
+
+                if (params.distillation.temp >= 75) {
+                    simProgress = Math.min(100, simProgress + 0.08);
+                }
+            }
+
+            // 1. Bunsen Burner Flame
+            if (params.distillation.heatPower > 0) {
+                ctx.save();
+                const flameH = 20 + params.distillation.heatPower * 8;
+                const grad = ctx.createRadialGradient(centerX, flaskY + 65, 2, centerX, flaskY + 65 - flameH, 20);
+                grad.addColorStop(0, '#38bdf8');
+                grad.addColorStop(0.4, '#f97316');
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(centerX, flaskY + 60, flameH, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Bunsen Stand
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 35, flaskY + 70);
+            ctx.lineTo(centerX + 35, flaskY + 70);
+            ctx.moveTo(centerX, flaskY + 70);
+            ctx.lineTo(centerX, flaskY + 110);
+            ctx.stroke();
+
+            // 2. Boiling Flask (Balão de Destilação)
+            const flaskRadius = 45;
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            
+            // Liquid in Flask
+            const liquidLevel = flaskRadius * 0.7 * (1 - (simProgress / 100) * 0.5);
+            ctx.beginPath();
+            ctx.arc(centerX, flaskY, flaskRadius, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.fillStyle = simProgress > 50 ? 'rgba(56, 189, 248, 0.5)' : 'rgba(168, 85, 247, 0.6)';
+            ctx.fill();
+
+            // Boiling Bubbles
+            if (params.distillation.temp > 70 && isRunning) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                for (let i = 0; i < 6; i++) {
+                    const bx = centerX + Math.sin(particleTimer * 3 + i) * 20;
+                    const by = flaskY + flaskRadius * 0.4 - ((particleTimer * 20 + i * 15) % 30);
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Glass Contour Flask Body
+            ctx.beginPath();
+            ctx.arc(centerX, flaskY, flaskRadius, 0.25 * Math.PI, 0.75 * Math.PI, true);
+            // Neck of flask
+            ctx.lineTo(centerX - 12, flaskY - 110);
+            ctx.lineTo(centerX + 12, flaskY - 110);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Fractionating Column beads
+            ctx.fillStyle = 'rgba(203, 213, 225, 0.4)';
+            for (let y = flaskY - 40; y > flaskY - 100; y -= 8) {
+                ctx.beginPath();
+                ctx.arc(centerX - 4, y, 3, 0, Math.PI * 2);
+                ctx.arc(centerX + 4, y + 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Thermometer on top
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, flaskY - 110);
+            ctx.lineTo(centerX, flaskY - 140);
+            ctx.stroke();
+            // Thermometer Bulb
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(centerX, flaskY - 105, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Live Temp Display on Thermometer
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 11px Inter';
+            ctx.fillText(`${params.distillation.temp.toFixed(0)}°C`, centerX - 18, flaskY - 148);
+
+            // 3. Condenser Tube (Condensador de Liebig)
+            const condStartX = centerX + 10;
+            const condStartY = flaskY - 80;
+            const condEndX = w * 0.75;
+            const condEndY = flaskY + 30;
+
+            // Condenser Outer Jacket
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.lineWidth = 18;
+            ctx.beginPath();
+            ctx.moveTo(condStartX, condStartY);
+            ctx.lineTo(condEndX, condEndY);
+            ctx.stroke();
+
+            // Inner Vapor Tube
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(condStartX, condStartY);
+            ctx.lineTo(condEndX, condEndY);
+            ctx.stroke();
+
+            // Condenser Cooling Water Flow Animation (blue ripples)
+            if (isRunning) {
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.5)';
+                ctx.lineWidth = 14;
+                ctx.setLineDash([8, 8]);
+                ctx.lineDashOffset = -particleTimer * 15;
+                ctx.beginPath();
+                ctx.moveTo(condEndX, condEndY);
+                ctx.lineTo(condStartX, condStartY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Vapors in column
+            if (params.distillation.temp > 70) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                for (let i = 0; i < 5; i++) {
+                    const vx = condStartX + (condEndX - condStartX) * ((particleTimer * 0.3 + i * 0.2) % 1);
+                    const vy = condStartY + (condEndY - condStartY) * ((particleTimer * 0.3 + i * 0.2) % 1);
+                    ctx.beginPath();
+                    ctx.arc(vx, vy, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // 4. Receiver Flask (Erlenmeyer do Destilado)
+            const recvX = condEndX;
+            const recvY = condEndY + 65;
+
+            // Dripping Ethanol Droplets
+            if (params.distillation.temp > 75 && isRunning) {
+                const dropY = condEndY + ((particleTimer * 40) % 60);
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(recvX, dropY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Erlenmeyer Glass Shape
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(recvX - 10, recvY - 45);
+            ctx.lineTo(recvX + 10, recvY - 45);
+            ctx.lineTo(recvX + 35, recvY + 20);
+            ctx.lineTo(recvX - 35, recvY + 20);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Collected Ethanol Liquid
+            const destilateH = (simProgress / 100) * 45;
+            if (destilateH > 0) {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.7)';
+                ctx.beginPath();
+                ctx.moveTo(recvX - 33, recvY + 18);
+                ctx.lineTo(recvX + 33, recvY + 18);
+                ctx.lineTo(recvX + 10 + (23 * (1 - destilateH / 45)), recvY + 18 - destilateH);
+                ctx.lineTo(recvX - 10 - (23 * (1 - destilateH / 45)), recvY + 18 - destilateH);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function renderFunnel() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const topY = h * 0.2;
+
+            if (isRunning && params.funnel.stopcockOpen && simProgress < 100) {
+                simProgress += 0.15 * params.funnel.flowRate;
+            }
+
+            ctx.save();
+
+            // Support Ring
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(cx, topY + 40, 55, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Stand Bar
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(cx - 100, topY - 20);
+            ctx.lineTo(cx - 100, topY + 280);
+            ctx.lineTo(cx + 60, topY + 280);
+            ctx.stroke();
+
+            // Funnel Glass Contour
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 3;
+
+            // Pear-shaped funnel body path
+            ctx.beginPath();
+            ctx.moveTo(cx - 50, topY);
+            ctx.bezierCurveTo(cx - 65, topY + 60, cx - 40, topY + 120, cx - 8, topY + 160);
+            ctx.lineTo(cx - 8, topY + 200); // Stem left
+            ctx.lineTo(cx + 8, topY + 200); // Stem right
+            ctx.lineTo(cx + 8, topY + 160);
+            ctx.bezierCurveTo(cx + 40, topY + 120, cx + 65, topY + 60, cx + 50, topY);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Liquid Phases inside Funnel
+            // Bottom Phase (Water - Blue)
+            const waterVol = Math.max(0, 1 - (simProgress / 100));
+            if (waterVol > 0) {
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.75)'; // Water cyan
+                ctx.beginPath();
+                ctx.moveTo(cx - 8, topY + 160);
+                ctx.lineTo(cx + 8, topY + 160);
+                ctx.bezierCurveTo(cx + 40 * waterVol, topY + 120 + 30 * (1 - waterVol), cx + 55 * waterVol, topY + 60 + 60 * (1 - waterVol), cx + 40 * waterVol, topY + 80 + 70 * (1 - waterVol));
+                ctx.lineTo(cx - 40 * waterVol, topY + 80 + 70 * (1 - waterVol));
+                ctx.bezierCurveTo(cx - 55 * waterVol, topY + 60 + 60 * (1 - waterVol), cx - 40 * waterVol, topY + 120 + 30 * (1 - waterVol), cx - 8, topY + 160);
+                ctx.fill();
+            }
+
+            // Top Phase (Oil - Yellow/Amber)
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.8)'; // Oil amber
+            ctx.beginPath();
+            ctx.moveTo(cx - 48, topY + 15);
+            ctx.bezierCurveTo(cx - 60, topY + 50, cx - 35, topY + 90, cx - 30, topY + 100);
+            ctx.lineTo(cx + 30, topY + 100);
+            ctx.bezierCurveTo(cx + 35, topY + 90, cx + 60, topY + 50, cx + 48, topY + 15);
+            ctx.closePath();
+            ctx.fill();
+
+            // Interface Line / Meniscus
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 32, topY + 100);
+            ctx.lineTo(cx + 32, topY + 100);
+            ctx.stroke();
+
+            // Stopcock Valve (Torneira)
+            const valveY = topY + 175;
+            ctx.fillStyle = params.funnel.stopcockOpen ? '#22c55e' : '#ef4444';
+            ctx.beginPath();
+            ctx.arc(cx, valveY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draining Fluid Stream
+            if (params.funnel.stopcockOpen && waterVol > 0 && isRunning) {
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.8)';
+                ctx.fillRect(cx - 2, valveY + 8, 4, 70);
+
+                // Drip in beaker
+                const dropY = valveY + 70 + ((particleTimer * 50) % 30);
+                ctx.beginPath();
+                ctx.arc(cx, dropY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Beaker Below (Copé / Béquer)
+            const beakerY = topY + 250;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(cx - 40, beakerY - 10, 80, 50);
+
+            // Water collected in beaker
+            const collectedH = (simProgress / 100) * 40;
+            if (collectedH > 0) {
+                ctx.fillStyle = 'rgba(14, 165, 233, 0.75)';
+                ctx.fillRect(cx - 38, beakerY + 38 - collectedH, 76, collectedH);
+            }
+
+            ctx.restore();
+        }
+
+        function renderFiltration() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const topY = h * 0.25;
+
+            if (isRunning && simProgress < 100) {
+                simProgress += 0.12 * params.filtration.pourSpeed;
+                params.filtration.filterClog = Math.min(100, simProgress);
+                const cakeElem = document.getElementById('filterCakeText');
+                if (cakeElem) cakeElem.textContent = `${Math.floor(params.filtration.filterClog)}%`;
+            }
+
+            ctx.save();
+
+            // Glass Funnel Contour
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx - 60, topY);
+            ctx.lineTo(cx - 10, topY + 80);
+            ctx.lineTo(cx - 10, topY + 140);
+            ctx.lineTo(cx + 10, topY + 140);
+            ctx.lineTo(cx + 10, topY + 80);
+            ctx.lineTo(cx + 60, topY);
+            ctx.stroke();
+
+            // Paper Filter Cone (Papel de Filtro)
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.moveTo(cx - 52, topY + 8);
+            ctx.lineTo(cx, topY + 75);
+            ctx.lineTo(cx + 52, topY + 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Residue / Sand Particles on Filter Cone
+            const residueCount = Math.floor((simProgress / 100) * 45);
+            ctx.fillStyle = '#d97706'; // Sand brown
+            for (let i = 0; i < residueCount; i++) {
+                const rx = cx + (Math.sin(i * 99) * (40 - (i % 20)));
+                const ry = topY + 15 + (i % 35);
+                ctx.beginPath();
+                ctx.arc(rx, ry, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Dripping Filtrate Droplets
+            if (isRunning && simProgress > 0 && simProgress < 100) {
+                const dripY = topY + 140 + ((particleTimer * 35) % 50);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.9)';
+                ctx.beginPath();
+                ctx.arc(cx, dripY, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Erlenmeyer Flask at bottom
+            const erlenY = topY + 180;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx - 18, erlenY);
+            ctx.lineTo(cx + 18, erlenY);
+            ctx.lineTo(cx + 50, erlenY + 80);
+            ctx.lineTo(cx - 50, erlenY + 80);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Clean Filtrate (Water) accumulated
+            const filtrateH = (simProgress / 100) * 55;
+            if (filtrateH > 0) {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.65)';
+                ctx.beginPath();
+                ctx.moveTo(cx - 48, erlenY + 78);
+                ctx.lineTo(cx + 48, erlenY + 78);
+                ctx.lineTo(cx + 18 + (30 * (1 - filtrateH / 55)), erlenY + 78 - filtrateH);
+                ctx.lineTo(cx - 18 - (30 * (1 - filtrateH / 55)), erlenY + 78 - filtrateH);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function renderCentrifuge() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h * 0.5;
+
+            if (isRunning) {
+                // Accelerate RPM to target
+                if (params.centrifuge.rpm < params.centrifuge.targetRpm) {
+                    params.centrifuge.rpm += 25;
+                } else if (params.centrifuge.rpm > params.centrifuge.targetRpm) {
+                    params.centrifuge.rpm -= 25;
+                }
+
+                if (params.centrifuge.rpm > 500 && simProgress < 100) {
+                    simProgress += (params.centrifuge.rpm / 2500) * 0.15;
+                }
+            } else {
+                params.centrifuge.rpm = Math.max(0, params.centrifuge.rpm - 30);
+            }
+
+            ctx.save();
+
+            // Centrifuge Chamber Outer Ring
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 120, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Rotor Center Hub
+            ctx.fillStyle = '#64748b';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rotation angle
+            const spinAngle = particleTimer * (params.centrifuge.rpm / 100);
+
+            // Render 4 Rotating Test Tubes
+            for (let i = 0; i < 4; i++) {
+                const angle = spinAngle + (i * Math.PI / 2);
+                const tubeLength = 70;
+                const tx = cx + Math.cos(angle) * tubeLength;
+                const ty = cy + Math.sin(angle) * tubeLength;
+
+                ctx.save();
+                ctx.translate(tx, ty);
+                ctx.rotate(angle + Math.PI / 2);
+
+                // Glass Tube Shape
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 25, 8, 0, Math.PI); // Rounded tube bottom
+                ctx.lineTo(-8, -20);
+                ctx.lineTo(8, -20);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Liquid Content Phase Separation
+                const sepFactor = simProgress / 100;
+
+                // Red Cells (Bottom)
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(-7, 25 - (15 * sepFactor), 14, 10 + (15 * sepFactor));
+
+                // Plasma (Top - Yellowish)
+                ctx.fillStyle = sepFactor > 0.1 ? 'rgba(253, 224, 71, 0.85)' : '#dc2626';
+                ctx.fillRect(-7, -15, 14, 30 - (12 * sepFactor));
+
+                ctx.restore();
+            }
+
+            // Live RPM Speedometer Overlay
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 16px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${Math.floor(params.centrifuge.rpm)} RPM`, cx, cy + 165);
+
+            ctx.restore();
+        }
+
+        function renderMagnetic() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h * 0.75;
+
+            ctx.save();
+
+            // Tray / Petri Dish Container
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, 120, 30, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Sand Layer (Yellow dots/fill)
+            ctx.fillStyle = 'rgba(217, 119, 6, 0.4)';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, 115, 26, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sand Grain Textures
+            ctx.fillStyle = '#fbbf24';
+            for (let i = 0; i < 40; i++) {
+                const sx = cx + (Math.sin(i * 12) * 90);
+                const sy = cy + (Math.cos(i * 33) * 18);
+                ctx.fillRect(sx, sy, 2, 2);
+            }
+
+            // Magnetic Filings Physics & Attraction
+            const mx = params.magnetic.magnetX;
+            const my = params.magnetic.magnetY;
+            const magForce = params.magnetic.magnetPower * 1.5;
+
+            magneticParticles.forEach(p => {
+                if (!p.attached) {
+                    const dist = Math.hypot(mx - p.x, my - p.y);
+                    if (dist < magForce) {
+                        // Attraction force vector
+                        const angle = Math.atan2(my - p.y, mx - p.x);
+                        p.vx += Math.cos(angle) * 1.8;
+                        p.vy += Math.sin(angle) * 1.8;
+                        p.x += p.vx;
+                        p.y += p.vy;
+
+                        if (dist < 35) {
+                            p.attached = true;
+                            p.offsetX = p.x - mx;
+                            p.offsetY = p.y - my;
+                        }
+                    }
+                } else {
+                    // Lock particle to moving magnet
+                    p.x = mx + p.offsetX;
+                    p.y = my + p.offsetY;
+                }
+
+                // Render Iron Particle
+                ctx.fillStyle = p.attached ? '#e2e8f0' : '#334155';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 2. Render Horseshoe Magnet (Ímã de Neodímio)
+            ctx.save();
+            ctx.translate(mx, my);
+
+            // Red North Pole
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-25, -30, 18, 35);
+            // Blue South Pole
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(7, -30, 18, 35);
+
+            // Magnet Arch Top
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 18;
+            ctx.beginPath();
+            ctx.arc(0, -25, 16, Math.PI, 0);
+            ctx.stroke();
+
+            // Pole Labels N / S
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px Inter';
+            ctx.fillText('N', -20, -10);
+            ctx.fillText('S', 12, -10);
+
+            // Magnetic Field Lines Visualizer
+            if (params.magnetic.magnetPower > 0) {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, magForce, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+            ctx.restore();
+        }
+
+        window.onload = function() {
+            initMagneticParticles();
+            buildDynamicControls(currentMethod);
+            updateManualContent(currentMethod);
+            animate();
+        };
+    </script>
+</body>
+</html>
